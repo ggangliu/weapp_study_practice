@@ -1,0 +1,24 @@
+<!--pages/puzzle/index.wxml-->
+<view class='container'>
+
+<canvas canvas-id="firstCanvas"
+        style="margin: 5px; border:1px solid #000000; width:300px; height:200px; "
+        bindtouchstart="start"
+        bindtouchmove="move"
+        bindtouchend="end">
+</canvas>
+
+<canvas canvas-id="secondCanvas"
+        style="margin: 5px; border:1px solid #000000; width:300px; height:200px; ">
+</canvas>
+
+<view>
+<contact-button 
+  type="default-dark" 
+  size="30"
+  session-from="weapp"
+>联系客服
+</contact-button>
+</view>
+
+</view>

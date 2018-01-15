@@ -1,0 +1,4 @@
+/* pages/puzzle/index.wxss */
+.other-button-hover {
+  background-color: blue;
+}
