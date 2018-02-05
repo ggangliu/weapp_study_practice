@@ -56,4 +56,13 @@
             <text>快速增加 CGI</text>
         </navigator>
     </view>
+    <view class='btn-area'>
+    <form bindsubmit='formSubmit' report-submit='true' bindreset='formReset'> 
+      <input name="input" placeholder='222'/>
+      <view class="uploader-text">
+        <button type="primary" form-type='submit'>提交</button>
+      </view>
+    </form>
+    </view>
+    <button open-type="contact">进入客服会话</button>
 </view>

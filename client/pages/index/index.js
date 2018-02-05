@@ -21,6 +21,7 @@ Page({
         // 调用登录接口
         qcloud.login({
             success(result) {
+              console.log("result", result)
                 if (result) {
                     util.showSuccess('登录成功')
                     that.setData({
@@ -216,5 +217,29 @@ Page({
         }
         util.showBusy('信道连接中...')
         this.setData({ tunnelStatus: 'closed' })
+    },
+
+    formSubmit: function(e) {
+      //var context = e.detail.value
+      //var context = "TEST form"
+      console.log("form_id: ", e.detail)
+      wx.showLoading()
+      wx.request({
+        url: 'https://uatjwhyg.qcloud.la/weapp/message?form_id=' + e.detail.formId + '&value=' + e.detail.value['input'],
+        data: {
+          'form_id': e.detail.formId,
+          'value': e.detail.value['input']
+        },
+        header: {
+          'content-type': 'application/json;' // 默认值
+        },
+        method: 'POST',
+        success: function(res) {
+          wx.hideLoading();
+          if (res) {
+            console.log("formSubmit res: ", res)
+          }
+        }
+      })
     }
 })
