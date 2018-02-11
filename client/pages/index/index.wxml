@@ -64,5 +64,5 @@
       </view>
     </form>
     </view>
-    <button open-type="contact">进入客服会话</button>
+    <button type="primary" open-type="contact">进入客服会话</button>
 </view>
