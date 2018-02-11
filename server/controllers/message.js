@@ -7,11 +7,14 @@ var iconv = require("iconv-lite")
 var util  = require("util")
 const request = require('request');
 var xml2js = require('xml2js');
+var fs = require('fs');
 
 var openid = ''
 var session_key = ''
 var access_token = ''
 var js_code = ''
+var thumb_media_id = ''
+
 /**
  * 响应 GET 请求（响应微信配置时的签名检查请求）
  */
@@ -24,8 +27,7 @@ async function get (ctx, next) {
 
 async function post (ctx, next) {
     // 检查签名，确认是微信发出的请求
-    //console.log("post ctx:", ctx)
-
+    console.log("post ctx:", ctx)
     /////////////////////////////////////
     if (ctx.query.js_code) {
       js_code = ctx.query.js_code
@@ -78,6 +80,9 @@ async function post (ctx, next) {
         console.log(err.stack)
         callback.apply(null)
       })
+
+      //post image 
+      post_image(access_token)
       return
     }
 
@@ -153,65 +158,37 @@ async function post (ctx, next) {
      * 解析微信发送过来的请求体
      * 可查看微信文档：https://mp.weixin.qq.com/debug/wxadoc/dev/api/custommsg/receive.html#接收消息和事件
      */
-    console.log("kefu:", ctx);
+
+    
     var body = 'success';
     ctx.body = body;
     
-
-    var contents = new Buffer(JSON.stringify({
-      "touser": openid,
-      "msgtype": "text",
-      "text":
-      {
-        "content": "We创者欢迎您....<a href=\"http://www.qq.com\" data-miniprogram-appid=\"wx87ccff16470f4817\" data-miniprogram-path=\"pages/index/index\">点击跳小程序</a>"
-      }
-    }))
-
-    var options = {
-      host: 'api.weixin.qq.com',
-      path: '/cgi-bin/message/custom/send?access_token=' + access_token,
-      method: 'POST',
-      port: 443,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': contents.length
-      }
-    }
-
-    console.log("contents", contents)
-    console.log("options", options)
-
-    var req = https.request(options, function (res) {
-      res.setEncoding('utf8');
-      console.log("statuscode: ", res.statusCode)
-      res.on('data', function (data) {
-        console.log('data:', data);
-      })
-    })
-
-
-    req.write(contents);
-    req.end();
-
-    /*
-    if (ctx.query.signature) {
-      const { signature, timestamp, nonce } = ctx.query;
-      body = checkSignature(signature, timestamp, nonce) ? 'success' : 'ERR_WHEN_CHECK_SIGNATURE';
-      //data.FromUserName = openid
-
-      var text = {
-        "content": "Hello World"
+    //test code 
+    {
+      let data = ctx.request.body
+      console.log("query: ", ctx.query)
+      console.log("kefu: ", data);
+      let buf = '';
+      let json_context = ''
+      console.log('FromUserName:', data['FromUserName'])
+      console.log('MsgType:', data['MsgType'])
+      if (data['MsgType'] == 'Event'){
+        return
       }
 
-      var contents = JSON.stringify({
-        "touser": openid,
-        "msgtype": "text",
-        "text": text
-      })
+      var contents = new Buffer(JSON.stringify({
+        "touser": data['FromUserName'],
+        "msgtype": "miniprogrampage",
+        "miniprogrampage": {
+          "title": "We创者",
+          "pagepath": "pages/index/index",
+          "thumb_media_id": "https://beishike-1255594548.cos.ap-chengdu.myqcloud.com/beishike/puff01_new.png"
+        }
+      }))
 
       var options = {
         host: 'api.weixin.qq.com',
-        path: 'cgi-bin/message/custom/send?access_token=' + access_token,
+        path: '/cgi-bin/message/custom/send?access_token=' + access_token,
         method: 'POST',
         port: 443,
         headers: {
@@ -219,6 +196,7 @@ async function post (ctx, next) {
           'Content-Length': contents.length
         }
       }
+
       console.log("contents", contents)
       console.log("options", options)
 
@@ -229,37 +207,178 @@ async function post (ctx, next) {
           console.log('data:', data);
         })
       })
-
-
       req.write(contents);
       req.end();
-    } else {
-      var data = JSON.parse(ctx.request.body.data);
-      console.log('data: ', data)
-      switch (data.MsgType) {
-        case 'text': {//用户在客服会话中发送文本消息
-          await sendTextMessage("我知道了", data, access_token);
-          break;
-        }
-        case 'image': { //用户在客服会话中发送图片消息
-          await sendImageMessage(data.MediaId, data, access_token);
-          break;
-        }
-        case 'event': {
-          console.log('event');
-          var content = '';
-          if (data.Event == 'user_enter_tempsession') {  //用户在小程序“客服会话按钮”进入客服会话,在聊天框进入不会有此事件
-            await sendTextMessage("您有什么问题吗?", data, access_token);
-          } else if (data.Event == 'kf_create_session') { //网页客服进入回话
-            console.log('网页客服进入回话');
+      /*
+      // 获取XML内容
+      ctx.setEncoding('utf8');
+      ctx.on('data', function (chunk) {
+        buf += chunk;
+      });
+      // 内容接收完毕
+      ctx.on('end', function () {
+        console.log('buf: ', buf)
+        xml2js.parseString(buf, function (err, json) {
+          if (err) {
+            err.status = 400;
+            console.log('err')
+          } else {
+            json_context = json
+            console.log("json: ", json)
+            ctx.body = json;
           }
-          break;
+        })
+        console.log("ctx.body.xml: ", ctx.body.xml)
+        let data = ctx.body.xml;
+        var msg = {
+          "toUserName": data.FromUserName[0],
+          "fromUserName": data.ToUserName[0],
+          "createTime": data.CreateTime[0],
+          "msgType": data.MsgType[0],
+          "content": data.Content[0],
+          "msgId": data.MsgId[0]
+        };
+        console.log("msg: ", msg)
+        //api_request(msg)
+        //echo
+        var contents = new Buffer(JSON.stringify({
+          "touser": openid,
+          "msgtype": "text",
+          "text":
+          {
+            "content": "We创者欢迎您....<a href=\"http://www.qq.com\" data-miniprogram-appid=\"wx87ccff16470f4817\" data-miniprogram-path=\"pages/index/index\">点击跳小程序</a>"
+          }
+        }))
+
+        var options = {
+          host: 'api.weixin.qq.com',
+          path: '/cgi-bin/message/custom/send?access_token=' + access_token,
+          method: 'POST',
+          port: 443,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': contents.length
+          }
         }
-      }
-    }
-    */
+
+        console.log("contents", contents)
+        console.log("options", options)
+
+        var req = https.request(options, function (res) {
+          res.setEncoding('utf8');
+          console.log("statuscode: ", res.statusCode)
+          res.on('data', function (data) {
+            console.log('data:', data);
+          })
+        })
+        req.write(contents);
+        req.end();
+      })
+      */
+    } 
+      //test code
+
     console.log('end');
     //ctx.body = body;
+}
+
+async function post_image(accessToken) {
+  var boundaryKey = Math.random().toString(16); 
+  var options = {
+    host: 'api.weixin.qq.com',
+    port: 443,
+    path: 'cgi-bin/media/upload?access_token=' + accessToken + 'type=image',
+    method: 'POST'
+  };
+
+
+  var reqHttps = https.request(options, function (resHttps) {
+    console.log("statusCode: ", resHttps.statusCode);
+    console.log("headers: ", resHttps.headers);
+
+    resHttps.on('data', function (body1) {
+      console.log("body:" + body1);
+    });
+  });
+
+  var payload = '--' + boundaryKey + '\r\n' + 'Content-Type: image/jpeg\r\n'
+    + 'Content-Disposition: form-data; name="media"; filename="gh_efc977173922_258.jpg"\r\n'
+    + 'Content-Disposition: form-data; name="media"; filename="gh_efc977173922_258.jpg"\r\n'
+
+  var enddata = '\r\n--' + boundaryKey + '--';
+
+  reqHttps.setHeader('Content-Type', 'multipart/form-data; boundary=' + boundaryKey + '');
+  reqHttps.setHeader('Content-Length', Buffer.byteLength(payload) + Buffer.byteLength(enddata)); //+ req.files.media.size
+  reqHttps.write(payload);
+
+  var fileStream = fs.createReadStream("../images/gh_efc977173922_258.jpg", { bufferSize: 4 * 1024 });
+  fileStream.pipe(reqHttps, { end: false });
+  fileStream.on('end', function () {
+    // mark the end of the one and only part
+    reqHttps.end(enddata);
+
+  });
+
+  reqHttps.on('error', function (e) {
+    console.error("error:" + e);
+  });
+}
+
+async function api_request(data) {
+  var msg = {
+    "key": '463926bab2e040c89cb345dad8c0c96c',   // 可以填入自己申请的机器人的apiKey            
+    "info": data.content,
+    "userid": ~~(Math.random() * 99999)
+  };
+  var text = qs.stringify(msg);
+  var options = {
+    hostname: 'www.tuling123.com',
+    path: '/openapi/api',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
+  };
+  var requestObj = http.request(options, function (response) {
+    var result = '';
+    response.setEncoding('utf8');
+    response.on('data', function (chunk) {
+      result += chunk;
+    });
+    response.on('end', function () {
+      try {
+        var obj = JSON.parse(result);
+      }
+      catch (e) {
+        data.content = e.message;
+        echo(data, res);
+        return;
+      }
+      data.content = obj.text;
+      echo(data, response);
+    })
+  });
+  requestObj.on('error', function (e) {
+    console.log('problem with request: ' + e.message);
+    data.content = e.message;
+    echo(data, res);
+  });
+  requestObj.write(text);
+  requestObj.end();
+}
+
+async function echo(data, res) {
+  var time = Math.round(new Date().getTime() / 1000);
+  var output = "" +
+    "<xml>" +
+    "<ToUserName><![CDATA[" + data.toUserName + "]]></ToUserName>" +
+    "<FromUserName><![CDATA[" + data.fromUserName + "]]></FromUserName>" +
+    "<CreateTime>" + time + "</CreateTime>" +
+    "<MsgType><![CDATA[" + data.msgType + "]]></MsgType>" +
+    "<Content><![CDATA[" + data.content + "]]></Content>" +
+    "</xml>";
+  res.type('xml');
+  res.send(output);
 }
 
 async function sendTextMessage(content, FromUserName, access_token) {
