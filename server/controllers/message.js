@@ -82,7 +82,7 @@ async function post (ctx, next) {
       })
 
       //post image 
-      post_image(access_token)
+      //post_image(access_token)
       return
     }
 
@@ -172,17 +172,17 @@ async function post (ctx, next) {
       let json_context = ''
       console.log('FromUserName:', data['FromUserName'])
       console.log('MsgType:', data['MsgType'])
-      if (data['MsgType'] == 'Event'){
+      console.log("data['Content']:", data['Content'])
+	  
+	  if (data['MsgType'] == 'Event'){
         return
       }
-
+	  
       var contents = new Buffer(JSON.stringify({
-        "touser": data['FromUserName'],
-        "msgtype": "miniprogrampage",
-        "miniprogrampage": {
-          "title": "We创者",
-          "pagepath": "pages/index/index",
-          "thumb_media_id": "https://beishike-1255594548.cos.ap-chengdu.myqcloud.com/beishike/puff01_new.png"
+        "touser": openid,
+        "msgtype": "text",
+        "text": {
+          "content": "欢迎光临We创..."
         }
       }))
 
