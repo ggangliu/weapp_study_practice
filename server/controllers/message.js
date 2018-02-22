@@ -172,11 +172,12 @@ async function post (ctx, next) {
       let json_context = ''
       console.log('FromUserName:', data['FromUserName'])
       console.log('MsgType:', data['MsgType'])
-      console.log("data['Content']:", data['Content'])
+      
 	  
-	  if (data['MsgType'] == 'Event'){
+	    if (data['MsgType'] == 'Event'){
         return
       }
+      console.log("data['Content']:", data['Content'])
 	  
       var contents = new Buffer(JSON.stringify({
         "touser": openid,
