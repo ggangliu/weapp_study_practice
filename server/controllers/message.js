@@ -182,7 +182,7 @@ async function post (ctx, next) {
         "touser": openid,
         "msgtype": "text",
         "text": {
-          "content": "欢迎光临We创..."
+          "content": "We创者欢迎您....<a href=\"http://www.qq.com\" data-miniprogram-appid=\"wx87ccff16470f4817\" data-miniprogram-path=\"pages/index/index\">点击跳小程序</a>"
         }
       }))
 
